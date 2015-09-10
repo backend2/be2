@@ -1,14 +1,15 @@
 defmodule Be2.Elixir.MapTest do
   use ExUnit.Case, async: false
 
+  # Uncoment code in body function to see output
   defp puts(mess) do
-    IO.puts "\n"
-    IO.puts mess
+    # IO.puts "\n"
+    # IO.puts mess
   end  
 
   defp print_map(m) do
   	 Enum.each m, fn({k,v}) -> 
-  	   IO.puts "#{k} => #{v}" 
+  	   puts "#{k} => #{v}" 
   	 end
   end
   
