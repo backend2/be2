@@ -8,18 +8,18 @@ defmodule Be2.Elixir.MapTest do
   end  
 
   defp print_map(m) do
-  	 Enum.each m, fn({k,v}) -> 
-  	   puts "#{k} => #{v}" 
-  	 end
+     Enum.each m, fn({k,v}) -> 
+       puts "#{k} => #{v}" 
+     end
   end
   
   defp process_map(m) do
-  	pr_m = 
-  	   m |> Map.delete(:d) |> Map.put(:a, "new")
-  	puts "Print from proces_map(m)"
-  	print_map pr_m
-  	pr_m   
-  end	
+    pr_m = 
+       m |> Map.delete(:d) |> Map.put(:a, "new")
+    puts "Print from proces_map(m)"
+    print_map pr_m
+    pr_m   
+  end 
 
 
   test "the_map_work" do
