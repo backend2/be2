@@ -92,12 +92,12 @@ defmodule Be2.Esqlite.OpenTest do
     rm_file_if_exists "test2.db"
   end
 
-  test "open_test_2_memory_db" do
+  defp test_2_in_memory_db(memory_db_name) do
     # Open db1
-    {:ok, db1} = :esqlite3.open(':memory:')
+    {:ok, db1} = :esqlite3.open(memory_db_name)
     assert :ok == :esqlite3.exec('CREATE TABLE tbl (id integer NOT NULL)', db1)
     # Open db2
-    {:ok, db2} = :esqlite3.open(':memory:')
+    {:ok, db2} = :esqlite3.open(memory_db_name)
     assert :ok == :esqlite3.exec('CREATE TABLE tbl (id integer NOT NULL)', db2)
 
     assert :ok == :esqlite3.exec('INSERT INTO tbl VALUES (1)', db1)
@@ -117,8 +117,8 @@ defmodule Be2.Esqlite.OpenTest do
     assert :ok == :esqlite3.close(db2)
 
     # Open again
-    {:ok, db1} = :esqlite3.open(':memory:')
-    {:ok, db2} = :esqlite3.open(':memory:')
+    {:ok, db1} = :esqlite3.open(memory_db_name)
+    {:ok, db2} = :esqlite3.open(memory_db_name)
 
     assert {:error, {:sqlite_error, 'no such table: tbl'}} ==
        catch_throw (:esqlite3.q('SELECT id FROM tbl ORDER BY id DESC', db1))
@@ -129,6 +129,56 @@ defmodule Be2.Esqlite.OpenTest do
     assert :ok == :esqlite3.close(db1)
     assert :ok == :esqlite3.close(db2)
   end
+
+  defp test_2_in_memory_with_shared_cache_db(memory_db_name) do
+    # Open db1
+    {:ok, db1} = :esqlite3.open(memory_db_name)
+    assert :ok == :esqlite3.exec('CREATE TABLE tbl (id integer NOT NULL)', db1)
+    # Open db2
+    {:ok, db2} = :esqlite3.open(memory_db_name)
+
+    assert :ok == :esqlite3.exec('INSERT INTO tbl VALUES (1)', db1)
+    assert [{1}] == :esqlite3.q('SELECT id FROM tbl', db1)
+    assert [{1}] == :esqlite3.q('SELECT id FROM tbl', db2)
+
+    assert :ok == :esqlite3.exec('INSERT INTO tbl VALUES (2)', db2)
+    assert [{1}, {2}] == :esqlite3.q('SELECT id FROM tbl ORDER BY id', db1)
+    assert [{1}, {2}] == :esqlite3.q('SELECT id FROM tbl ORDER BY id', db2)
+
+    assert :ok == :esqlite3.exec('INSERT INTO tbl VALUES (3)', db1)
+    assert :ok == :esqlite3.exec('INSERT INTO tbl VALUES (4)', db2)
+    assert [{1}, {2}, {3}, {4}] == :esqlite3.q('SELECT id FROM tbl ORDER BY id', db1)
+    assert [{1}, {2}, {3}, {4}] == :esqlite3.q('SELECT id FROM tbl ORDER BY id', db2)
+
+    assert :ok == :esqlite3.close(db1)
+    assert [{1}, {2}, {3}, {4}] == :esqlite3.q('SELECT id FROM tbl ORDER BY id', db2)
+    assert :ok == :esqlite3.close(db2)
+
+    # Open again
+    {:ok, db1} = :esqlite3.open(memory_db_name)
+    {:ok, db2} = :esqlite3.open(memory_db_name)
+
+    # TODO Db is not empty
+    assert [{1}, {2}, {3}, {4}] == :esqlite3.q('SELECT id FROM tbl ORDER BY id', db1)
+    assert [{1}, {2}, {3}, {4}] == :esqlite3.q('SELECT id FROM tbl ORDER BY id', db2)
+    assert :ok == :esqlite3.exec('DROP TABLE tbl', db1)
+
+    assert {:error, {:sqlite_error, 'no such table: tbl'}} ==
+       catch_throw (:esqlite3.q('SELECT id FROM tbl ORDER BY id DESC', db1))
+
+    assert {:error, {:sqlite_error, 'no such table: tbl2'}} ==
+       catch_throw (:esqlite3.q('SELECT * FROM tbl2', db2))
+
+    assert :ok == :esqlite3.close(db1)
+    assert :ok == :esqlite3.close(db2)
+  end
+
+  test "open_test_2_memory_db" do
+    test_2_in_memory_db(':memory:')
+    test_2_in_memory_db('file::memory:')
+    test_2_in_memory_with_shared_cache_db('file::memory:?cache=shared')
+  end
+
 
 
 end
