@@ -92,4 +92,43 @@ defmodule Be2.Esqlite.OpenTest do
     rm_file_if_exists "test2.db"
   end
 
+  test "open_test_2_memory_db" do
+    # Open db1
+    {:ok, db1} = :esqlite3.open(':memory:')
+    assert :ok == :esqlite3.exec('CREATE TABLE tbl (id integer NOT NULL)', db1)
+    # Open db2
+    {:ok, db2} = :esqlite3.open(':memory:')
+    assert :ok == :esqlite3.exec('CREATE TABLE tbl (id integer NOT NULL)', db2)
+
+    assert :ok == :esqlite3.exec('INSERT INTO tbl VALUES (1)', db1)
+    assert [{1}] == :esqlite3.q('SELECT id FROM tbl', db1)
+    assert [] == :esqlite3.q('SELECT id FROM tbl', db2)
+
+    assert :ok == :esqlite3.exec('INSERT INTO tbl VALUES (2)', db2)
+    assert [{1}] == :esqlite3.q('SELECT id FROM tbl', db1)
+    assert [{2}] == :esqlite3.q('SELECT id FROM tbl', db2)
+
+    assert :ok == :esqlite3.exec('INSERT INTO tbl VALUES (3)', db1)
+    assert :ok == :esqlite3.exec('INSERT INTO tbl VALUES (4)', db2)
+    assert [{1}, {3}] == :esqlite3.q('SELECT id FROM tbl ORDER BY id', db1)
+    assert [{2}, {4}] == :esqlite3.q('SELECT id FROM tbl ORDER BY id', db2)
+
+    assert :ok == :esqlite3.close(db1)
+    assert :ok == :esqlite3.close(db2)
+
+    # Open again
+    {:ok, db1} = :esqlite3.open(':memory:')
+    {:ok, db2} = :esqlite3.open(':memory:')
+
+    assert {:error, {:sqlite_error, 'no such table: tbl'}} ==
+       catch_throw (:esqlite3.q('SELECT id FROM tbl ORDER BY id DESC', db1))
+
+    assert {:error, {:sqlite_error, 'no such table: tbl2'}} ==
+       catch_throw (:esqlite3.q('SELECT * FROM tbl2', db2))
+
+    assert :ok == :esqlite3.close(db1)
+    assert :ok == :esqlite3.close(db2)
+  end
+
+
 end
